@@ -1,4 +1,6 @@
 # GoodreadsScraper
+![goodreads](https://github.com/JakeStrang1/GoodreadsScraper/assets/16689756/4caa8a85-6e47-4d5a-a763-69ea20a70360)
+
 A web scraper to compile book data from Goodreads.
 
 ## Motivation
