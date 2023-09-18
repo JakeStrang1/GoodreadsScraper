@@ -1,5 +1,6 @@
 import time
 from book_scraper import BookScraper
+from functools import reduce
 from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as EC
@@ -54,6 +55,7 @@ class GoodreadsScraper:
         # Navigate to page
         current_url = ensure_absolute_link(current_url)
         self.webdriver.get(current_url)
+        time.sleep(2) # extra time for loading
 
         # Scrape page links
         links = self.__scrape_links()
@@ -84,8 +86,9 @@ class GoodreadsScraper:
                 attempts = attempts + 1
 
         goodreads_links = filter(lambda x: x.startswith('https://www.goodreads.com'), all_links) # Filter out non-goodreads links
-        rel_links = list(map(lambda x: x.removeprefix('https://www.goodreads.com'), goodreads_links)) # Get relative links
-        return rel_links
+        relative_links = list(map(lambda x: x.removeprefix('https://www.goodreads.com'), goodreads_links)) # Get relative links
+        relevant_links = filter(lambda x: self.__is_relevant_link(x), relative_links) # filter out links from the ignored list
+        return relevant_links
 
     def __save_link(self, link):
         link = format_link(link)
@@ -113,8 +116,6 @@ class GoodreadsScraper:
         self.wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'siteHeader__topLevelLink')))
     
     def __scrape_book(self, book_url):
-        time.sleep(2) # extra time for loading
-        
         book = {}
         try:
             book = self.book_scraper.scrape_book(book_url)
@@ -124,6 +125,19 @@ class GoodreadsScraper:
             return
         
         self.db.books.insert_one(book)
+
+    def __is_relevant_link(self, relative_link):
+        # filter out certain links that we've decided aren't worth tracking
+        if relative_link.startswith("/author/quotes/"):
+            return False
+
+        if relative_link.startswith("/notes/"):
+            return False
+
+        if relative_link.startswith("/review/list/") and "shelf=" in relative_link:
+            return False
+
+        return True
 
 def start_driver():
     options = Options()
